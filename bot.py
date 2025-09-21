@@ -104,16 +104,15 @@ def add_item(user, item_name):
 def help(ack, respond, command):
     ack()
     respond("""> *All Available Commands:*
-> 
-> */satchel* -> Opens Your Satchel To View Your Items.   
-> */rank ->* Shows Your/A Tagged User's Current Rank.   
-> */coffers* -> Shows How Many Coffers You/A Tagged User Has.
-> */siege* -> Starts a Siege That The Warlord Will Give You.
-> */kill-count* -> Shows The Kill Count.
-> */exit-siege* -> Exits From The Current Siege
-> */siege-count* -> Shows How Many Sieges You've Done.
-> */attack* -> Attacks Your Opponent.
-> */admin* -> SALEH USE THIS TO GET A SWORD TO ATTACK WITH.
+>
+> */satchel* → View the items you currently carry.
+> */rank (user)* → Check your rank, or mention a user to see theirs.
+> */coffers (user)* → See how many coffers you hold, or mention a user to see theirs.
+> */siege* → March with your army into a siege. (Available once every 12 hours)
+> */exit-siege* → Withdraw from your current siege. (Still triggers the siege cooldown)
+> */siege-count (user)* → Shows how many sieges you've taken part in, or mention a user to see theirs.
+> */attack (weapon)* → Strike your foe with a chosen weapon.
+> */kill-count (user)* → Display your kill count, or mention a user to see theirs.
             """)
 
 @app.command('/satchel')
@@ -238,11 +237,11 @@ def siege(ack, respond, command):
         opponent2 = Opponents[opponent_name2]
 
         active_siege[slack_user_id] = {
-            "name": opponent_name,
-            "hp": opponent["health"],
-            "shield": opponent["shield"],
-            "damage": opponent["damage"],
-            "level": opponent["level"],
+            "opponents": [
+                {"name": opponent_name, "hp": opponent["health"], "shield": opponent["shield"], "damage": opponent["damage"], "level": opponent["level"]},
+                {"name": opponent_name2, "hp": opponent2["health"], "shield": opponent2["shield"], "damage": opponent2["damage"], "level": opponent2["level"]}
+            ],
+            "current": 0
         }
 
         user.health = 100
@@ -324,9 +323,10 @@ def attack(ack, respond, command):
         respond(f'*{text}* Is Not A Valid Weapon')
         return
 
+    siege = active_siege[slack_user_id]
     now = time.time()
     last_time = last_attack.get(slack_user_id)
-    opponent = active_siege[slack_user_id]
+    opponent = siege['opponents'][siege['current']]
 
     if last_time is not None:
         atime = now - last_time
@@ -383,20 +383,17 @@ You Now have:
     last_attack[slack_user_id] = now
 
     if opponent['hp'] <= 0:
-        Ranks = {
-            'Recruit': "low",
-            'Raider': 'mid',
-            'Champion': 'high',
-            'Warchief': 'veryhigh',
-        }
-        rank = Ranks.get(user.rank, "low")
-        randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
-        opponent2_name = random.choice(randomopp)
-        opponent2 = Opponents[opponent2_name]
-        del active_siege[slack_user_id]
         user.kills += 1
         session.commit()
-        respond(f"""You Have Defeated *{opponent['name']}*, 
+
+        siege["current"] += 1
+        if siege["current"] >= len(siege["opponents"]):
+            del active_siege[slack_user_id]
+            respond("You Have Won The Siege.")
+            return
+        else:
+            next_opponent = siege["opponents"][siege["current"]]
+            respond(f"""*You Have Defeated {opponent['name']}*, 
                             
 *The clash of steel and cries of battle echo around you as your army relentlessly pushes forward. Each step is hard-won,*
 *each swing of the blade a fight for survival.*
@@ -405,13 +402,20 @@ You Now have:
 *while Orpheus wades through the chaos, carving a path through the enemy ranks.*
                 
 *Bodies fall and walls tremble under the weight of war, yet your forces press on, battered but unbroken.*
-*Finally, after a grueling advance, you reach the castle gates, the air thick with smoke and the taste of iron.*
+*You press deeper into the castle, victory almost within reach…*
                 
-*And there, as if waiting for this very moment, emerges a new opponent...*
-                
-""")        
+*Inside the castle's halls, you search for spoils.*
+*Your eyes catch a chest gleaming in the torchlight… but as you reach for it, the air shifts.*
+*From the shadows, a new opponent emerges, it's...*
 
-        return
+*{next_opponent['name']}*
+{next_opponent['hp']} HP | {next_opponent['shield']} Shield | {next_opponent['damage']} Damage | {next_opponent['level'].capitalize()} Tier
+                        
+**
+                
+""")
+
+            return
     else:
         respond(f"""You Strike With Your *{text}*
 *{opponent['name']}* Now Has:
@@ -430,7 +434,16 @@ You Now have:
 
         if user.health <= 0:
             time.sleep(1.5)
-            respond("You Died.")
+            del active_siege[slack_user_id]
+            respond(f"""{opponent['name']} has struck you down. Your vision blurs, 
+the battlefield fading into a haze of blood and smoke.
+Just as the darkness closes in, two familiar figures break through the chaos—Heidi and Orpheus.
+                    
+With fierce determination, they lift your broken form and rush you to the healers' tents. 
+Their strength saves your life, but not the siege. 
+The fortress falls, your army retreats, You, Heidi and Orpheus all return to the Warlord's camp, burdened by defeat.
+                    
+The Warlord sneers as he faces you, saying... "Pathetic... perhaps I chose poorly." """)
         else:
             time.sleep(1.5)
             respond(f"""*{opponent['name']}* Has Attacked You. 
@@ -438,6 +451,54 @@ You Now Have:
 {user.health} HP | {user.shield} Shield""")
             
 
+@app.command('/kill-count')
+def coffers(ack, respond, command):
+    ack()
+
+    text = (command.get("text") or "").strip()
+
+    if text.startswith('@'):
+        slack_user_id = text
+        is_self = slack_user_id == command['user_id']
+    else:
+        slack_user_id = command['user_id']
+        is_self = True
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id)
+        session.add(user)
+        session.commit()
+    
+    if is_self:
+        respond(f"You Have Killed {user.kills} Enemies.")
+    else:
+        respond(f"<{slack_user_id}> Has  Killed {user.kills} Enemies")
+
+
+@app.command('/siege-count')
+def coffers(ack, respond, command):
+    ack()
+
+    text = (command.get("text") or "").strip()
+
+    if text.startswith('@'):
+        slack_user_id = text
+        is_self = slack_user_id == command['user_id']
+    else:
+        slack_user_id = command['user_id']
+        is_self = True
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id)
+        session.add(user)
+        session.commit()
+    
+    if is_self:
+        respond(f"You Have Done {user.sieges} Sieges.")
+    else:
+        respond(f"<{slack_user_id}> Has Done {user.sieges} Sieges")
 
 
 @app.command('/admin')
