@@ -34,6 +34,7 @@ class User(Base):
     coffers = Column(Integer, default=0)
     rank = Column(String,default='Recruit')
     inventory = Column(MutableDict.as_mutable(JSON), default=dict)
+    xp = Column(Integer, default=0)
     kills = Column(Integer, default=0)
     sieges = Column(Integer, default=0)
 
@@ -41,7 +42,8 @@ Base.metadata.create_all(engine)
 
 Items = {
     "Shield": {"unique": True}, 
-    "Potion": {"unique": False}
+    "Potion": {"unique": False},
+    "Sword": {"unique": True, "damage": 10},
 }
 
 Weapons = {
@@ -50,13 +52,21 @@ Weapons = {
 
 Opponents = {
 
+    # Very Low Tier
+
+    "Peasant": {"health": 20, "shield": 0, "level": 'verylow', "damage": 10},
+    "Militia": {"health": 15, "shield": 0, "level": 'verylow', "damage": 5},
+    "Bandit": {"health": 15, "shield": 0, "level": 'verylow', "damage": 7},
+    "Thief": {"health": 15, "shield": 2, "level": 'verylow', "damage": 10},
+    "Squire": {"health": 20, "shield": 3, "level": 'verylow', "damage": 12},
+
     # Low Tier
 
-    "Footman": {"health": 15, "shield": 0, "level": 'low', "damage": 10},
-    "Spearman": {"health": 15,"shield": 5, "level": 'low', "damage": 10},
-    "Scout": {"health": 20, "shield": 5, "level": 'low', "damage": 5},
-    "Skirmisher": {"health": 20, "shield": 0, "level": 'low', "damage": 5},
-    "Spearman": {"health": 25, "shield": 5, "level": 'low', "damage": 10},
+    "Footman": {"health": 30, "shield": 0, "level": 'low', "damage": 20},
+    "Spearman": {"health": 35,"shield": 5, "level": 'low', "damage": 16},
+    "Scout": {"health": 25, "shield": 5, "level": 'low', "damage": 17},
+    "Skirmisher": {"health": 30, "shield": 0, "level": 'low', "damage": 22},
+    "Rookie": {"health": 25, "shield": 5, "level": 'low', "damage": 25},
 
     # Middle Tier
 
@@ -108,15 +118,17 @@ def help(ack, respond, command):
 > */satchel* → View the items you currently carry.
 > */rank (user)* → Check your rank, or mention a user to see theirs.
 > */coffers (user)* → See how many coffers you hold, or mention a user to see theirs.
-> */siege* → March with your army into a siege. (Available once every 12 hours)
+> */siege* → March with your army into a siege. (Available once every 12 hours, Slight chance to get ambushed if you're a high rank)
 > */exit-siege* → Withdraw from your current siege. (Still triggers the siege cooldown)
 > */siege-count (user)* → Shows how many sieges you've taken part in, or mention a user to see theirs.
 > */attack (weapon)* → Strike your foe with a chosen weapon.
 > */kill-count (user)* → Display your kill count, or mention a user to see theirs.
+> */raid* → Raid a village with your army, (A smaller siege with a smaller cooldown but less valuable rewards, Slight chance to get ambushed if you're a high rank)
+
             """)
 
 @app.command('/satchel')
-def help(ack, respond, command):
+def satchel(ack, respond, command):
     ack()
     slack_user_id = command['user_id']
 
@@ -190,6 +202,85 @@ cds = {}
 siege_cd_seconds = 12 * 60 * 60
 last_attack = {}
 
+
+siege_stages = [
+
+    # FIRST
+
+"""*You Have Defeated The First Opponent, 
+                            
+*The clash of steel and cries of battle echo around you as your army relentlessly pushes forward. Each step is hard-won,*
+*each swing of the blade a fight for survival.*
+                
+*Heidi moves with unwavering determination, striking with precision,* 
+*while Orpheus wades through the chaos, carving a path through the enemy ranks.*
+                
+*Bodies fall and walls tremble under the weight of war, yet your forces press on, battered but unbroken.*
+*You press deeper into the castle, victory almost within reach...*
+                
+*Inside the castle's halls, you search for spoils.*
+*Your eyes catch a chest gleaming in the torchlight... but as you reach for it, the air shifts.*
+*From the shadows, a new opponent emerges, it's...*""",
+
+    # SECOND
+
+"""*Smoke and screams fill the courtyard, the air thick with ash and steel.*  
+*Arrows rain from the battlements, clattering against shields and biting into the earth around you.*  
+                
+*Heidi raises her shield high, pushing through the storm, each step forward a defiance of death itself.*  
+*Orpheus darts between shadows, his blade flashing like lightning as he fells archers before they can loose another shot.*  
+                
+*The clash of armies surges around you, but your path remains clear, carved by their unyielding strength.*  
+*The defenders cry out in desperation, their walls trembling beneath your relentless assault.*  
+                
+*As you reach the heart of the courtyard, silence falls for but a moment.*  
+*The smoke parts... and another foe steps forth to challenge you, it's...*""",
+
+    # THIRD
+
+"""*The halls of the keep stretch before you, torches guttering against stone walls as shadows twist and stretch.*  
+*Your boots strike the bloodstained floor in rhythm with the drum of battle beyond the walls.*  
+                
+*Heidi holds the narrow passage, her shield bracing against spears that strike in vain, each clang echoing in the darkness.*  
+*Orpheus slips past defenders with deadly precision, his strikes so swift the enemy crumbles before they even realize their fate.*  
+                
+*The air grows thick with smoke, the cries of the dying mingling with the groan of straining stone.*  
+*Victory feels close, yet danger coils tighter with every step deeper into the fortress.*  
+                
+*At the corridor's end, where the flicker of torchlight dies, a lone figure waits.*  
+*Their blade glimmers faintly in the gloom... it's...*""",
+
+    # FOURTH
+
+"""*Beyond the narrow halls, a pair of grand iron doors creak open to reveal the castle's great hall.*  
+*Once a place of feasts and revelry, the chamber is now a battlefield—tables overturned, tapestries burning, the scent of wine and blood mingling in the air.*  
+                
+*Heidi smashes through broken furniture, using her shield like a battering ram, each strike clearing a path.*  
+*Orpheus leaps onto a toppled banquet table, cutting down foes with a flourish, his laughter sharp and cold as steel.*  
+                
+*The clash here is brutal, desperate—the defenders cling to their last fragments of pride, refusing to yield.*  
+*Your army pours in behind you, filling the once-proud hall with chaos and thunder.*  
+                
+*At the head of the shattered banquet table, a figure rises from the wreckage, cloaked in fury and steel.*  
+*Their eyes lock onto yours—the next challenger awaits, it's...*""",
+
+    # FIFTH
+    
+"""*With a thunderous crash, the throne room doors burst open, their iron hinges screaming in protest.*  
+*Your army halts at the threshold, the roar of battle muffled as silence consumes the chamber.*  
+                
+*Heidi, bloodied but steadfast, steadies her shield at your side, her breath ragged but her resolve unbroken.*  
+*Orpheus twirls his sword with a predator's calm, his eyes burning with anticipation as he whispers, "This ends here."*  
+                
+*The grand chamber looms vast and cold, its gilded banners torn and blackened by war.*  
+*Each step toward the throne resounds like thunder, the weight of destiny pressing down upon you all.*  
+                
+*And there, before the throne of the broken keep, the final challenger steps forward, their presence filling the room like a storm.*  
+*The last battle begins—it's...*"""
+]
+
+
+
 @app.command('/siege')
 def siege(ack, respond, command):
     ack()
@@ -206,6 +297,8 @@ def siege(ack, respond, command):
     if slack_user_id in active_siege:
         respond("You're Already In a Siege. Use *'/attack'* To Continue Fighting!")
 
+    elif slack_user_id in active_raid:
+        respond("You're Still In The Midst of a Raid, Finish It Before Starting a Siege.")
 
     elif slack_user_id in cds:
         elapsed = now - cds[slack_user_id]
@@ -221,31 +314,45 @@ def siege(ack, respond, command):
     else:
 
         Ranks = {
-        'Recruit': "low",
-        'Raider': 'mid',
-        'Champion': 'high',
-        'Warchief': 'veryhigh',
+        "Recruit": "verylow",
+        "Footman": "verylow",
+        "Soldier": "low",
+        "Raider": "low",
+        "Veteran": "mid",
+        "Champion": "mid",
+        "Knight": "high",
+        "Commander": "high",
+        "General": "veryhigh",
+        "Conqueror": "veryhigh",
         }
 
         rank = Ranks.get(user.rank, "low")
 
         randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
 
-        opponent_name = random.choice(randomopp)
-        opponent_name2 = random.choice(randomopp)
-        opponent = Opponents[opponent_name]
-        opponent2 = Opponents[opponent_name2]
+        num_opponents = random.randint(3, 5)
+        num_opponents = min(num_opponents, max(1, len(randomopp)))
+
+        sampled_names = random.sample(randomopp, num_opponents)
+
+        opponents_list = [
+        {"name": name,
+        "hp": Opponents[name]["health"],
+        "shield": Opponents[name]["shield"],
+        "damage": Opponents[name]["damage"],
+        "level": Opponents[name]["level"]}
+        for name in sampled_names
+        ]
 
         active_siege[slack_user_id] = {
-            "opponents": [
-                {"name": opponent_name, "hp": opponent["health"], "shield": opponent["shield"], "damage": opponent["damage"], "level": opponent["level"]},
-                {"name": opponent_name2, "hp": opponent2["health"], "shield": opponent2["shield"], "damage": opponent2["damage"], "level": opponent2["level"]}
-            ],
-            "current": 0
+        "opponents": opponents_list,
+        "current": 0
         }
 
+        first_opponent = opponents_list[0]
+
         user.health = 100
-        user.shield = 0
+        user.shield = 100
         session.commit()
 
         cds[slack_user_id] = now
@@ -265,29 +372,99 @@ def siege(ack, respond, command):
 
 *You Stand There, Holding Your Ground, As You Spot An Opponent, It's...*
            
-*{opponent_name}*  
-{opponent['health']} HP | {opponent['shield']} Shield | {opponent['damage']} Damage | {opponent['level'].capitalize()} Tier
+*{first_opponent['name']}*
+
+{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].capitalize()} Tier
 
 *Use /attack To FIGHT!*
 """)
-        
-@app.command('/exit-siege')
-def exit(ack, respond, command):
+
+active_raid = {}
+raid_cds = {}
+raid_cd_seconds = 3 * 60 * 60
+
+@app.command('/raid')
+def raid(ack, respond, command):
     ack()
-    global active_siege
 
     slack_user_id = command['user_id']
+    now = time.time()
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id) 
+        session.add(user)
+        session.commit()  
 
     if slack_user_id in active_siege:
-        del active_siege[slack_user_id]
-        respond ('*You Have Fled The Siege... Traitor.*')
+        respond("You're Still In The Midst of a Siege. Finish It Before Starting a Raid.")
+
+    elif slack_user_id in active_raid:
+        respond("You're Already In a Raid. Use *'/attack'* To Continue Fighting!")
+
+    elif slack_user_id in raid_cds:
+        elapsed = now - raid_cds[slack_user_id]
+        if elapsed < raid_cd_seconds:
+            remaining_seconds = int(raid_cd_seconds - elapsed)
+            remaininghrs = remaining_seconds // 3600
+            remainingmins = (remaining_seconds % 3600) // 60
+            if remaininghrs > 0:
+                respond(f"You Must Rest Before Doing Another Raid. Please Wait *{remaininghrs}h {remainingmins}m.*")
+            else:
+                respond(f"You Must Rest Before Doing Another Raid. Please Wait *{remainingmins}m.*")
+
     else:
-        respond("You're Not In a Siege Right Now.")
+
+        Ranks = {
+        "Recruit": "verylow",
+        "Footman": "verylow",
+        "Soldier": "low",
+        "Raider": "low",
+        "Veteran": "mid",
+        "Champion": "mid",
+        "Knight": "high",
+        "Commander": "high",
+        "General": "veryhigh",
+        "Conqueror": "veryhigh",
+        }
+        rank = Ranks.get(user.rank, "low")
+
+        randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
+
+        num_opponents = random.randint(1, 3)
+        num_opponents = min(num_opponents, max(1, len(randomopp)))
+
+        sampled_names = random.sample(randomopp, num_opponents)
+
+        opponents_list = [
+        {"name": name,
+        "hp": Opponents[name]["health"],
+        "shield": Opponents[name]["shield"],
+        "damage": Opponents[name]["damage"],
+        "level": Opponents[name]["level"]}
+        for name in sampled_names
+        ]
+
+        active_raid[slack_user_id] = {
+        "opponents": opponents_list,
+        "current": 0
+        }
+
+        first_opponent = opponents_list[0]
+
+        user.health = 100
+        user.shield = 100
+        session.commit()
+
+        raid_cds[slack_user_id] = now
+        last_attack.pop(slack_user_id, None)
+
+        respond(f"""*You Have Started a Raid...*""")
 
 @app.command('/attack')
 def attack(ack, respond, command):
     ack()
-    global active_siege, last_attack
+    global active_siege, last_attack, siege_stages, active_raid
     
 
     min_time = 3
@@ -299,9 +476,15 @@ def attack(ack, respond, command):
 
     user = session.query(User).filter_by(slack_id=slack_user_id).first()
 
-    if slack_user_id not in active_siege:
-        respond("You're Not In a Siege Right Now.")
+    if slack_user_id in active_siege:
+        container = active_siege
+    elif slack_user_id in active_raid:
+        container = active_raid       
+    else:
+        respond("You're Not In The Middle of Any Battle Right Now.")
         return
+
+    active = container[slack_user_id]      
 
     if not user or not user.inventory:
         respond("You Have No Items To Fight With, Use /satchel To Check Your Inventory.")
@@ -323,10 +506,9 @@ def attack(ack, respond, command):
         respond(f'*{text}* Is Not A Valid Weapon')
         return
 
-    siege = active_siege[slack_user_id]
     now = time.time()
     last_time = last_attack.get(slack_user_id)
-    opponent = siege['opponents'][siege['current']]
+    opponent = active['opponents'][active['current']]
 
     if last_time is not None:
         atime = now - last_time
@@ -341,7 +523,8 @@ def attack(ack, respond, command):
             session.commit()
             last_attack[slack_user_id] = now
 
-            if user.health <= 0:
+            if user.health <= 0:    
+                del container[slack_user_id]
                 respond(f"You Attacked Too Fast... *{opponent['name']}* Parried And Killed You!")
                 return
             else:
@@ -361,6 +544,7 @@ You Now have:
             last_attack[slack_user_id] = now
 
             if user.health <= 0:
+                del container[slack_user_id]
                 respond(f"You Hesitated Too Long... *{opponent['name']}* struck and killed you!")
                 return
             else:
@@ -370,55 +554,74 @@ You Now have:
                 return
 
     # Opponent Being Hit
-    ack()
+
     dmg = weapon['damage']
 
     if opponent['shield'] > 0:
         dmgtaken = min(dmg, opponent['shield'])
         opponent['shield'] -= dmgtaken
+        dmg -= dmgtaken
 
     if dmg > 0:
         opponent['hp'] -= dmg
 
     last_attack[slack_user_id] = now
+    session.commit()
 
     if opponent['hp'] <= 0:
         user.kills += 1
         session.commit()
 
-        siege["current"] += 1
-        if siege["current"] >= len(siege["opponents"]):
-            del active_siege[slack_user_id]
-            respond("You Have Won The Siege.")
+        active["current"] += 1
+        if active["current"] >= len(active["opponents"]):
+            del container[slack_user_id]
+            user.xp += 10
+            user.coffers += 15
+            user.sieges += 1
+            session.commit()
+            respond(f"""*{opponent['name']} falls before your blade. The clash of steel fades,*
+                    
+*and for the first time, the battlefield grows quiet.*  
+*Orpheus wipes his blade, Heidi steadies her breath, and your army bloodied but unbroken, raises a cheer of triumph.*  
+
+*Together, you march back through the smoke and ruin, the castle behind you left in ashes.*
+*The gates of the Warlord's camp open wide as your forces return, weary yet victorious.*
+
+*The Warlord regards you with a hard gaze, his expression unreadable. Then, a rare smile breaks across his face.*  
+*"Another siege claimed... perhaps you are worthy after all."*  
+
+*You Have Gained 10 XP, And 15 Coffers.*""")
+
             return
         else:
-            next_opponent = siege["opponents"][siege["current"]]
-            respond(f"""*You Have Defeated {opponent['name']}*, 
-                            
-*The clash of steel and cries of battle echo around you as your army relentlessly pushes forward. Each step is hard-won,*
-*each swing of the blade a fight for survival.*
+
+            total = len(active["opponents"])
+            if total <= 1:
+                stage_index = len(siege_stages) - 1
+            else:
+                fraction = active['current'] / float(max(1, total - 1))
+                stage_index = int(fraction * (len(siege_stages) - 1))
+                stage_index = max(0, min(stage_index, len(siege_stages) -1 ))
                 
-*Heidi moves with unwavering determination, striking with precision,* 
-*while Orpheus wades through the chaos, carving a path through the enemy ranks.*
-                
-*Bodies fall and walls tremble under the weight of war, yet your forces press on, battered but unbroken.*
-*You press deeper into the castle, victory almost within reach…*
-                
-*Inside the castle's halls, you search for spoils.*
-*Your eyes catch a chest gleaming in the torchlight… but as you reach for it, the air shifts.*
-*From the shadows, a new opponent emerges, it's...*
+            next_opponent = active["opponents"][active["current"]] 
+            stage_text = siege_stages[stage_index] if siege_stages else ""
+            respond(f"""*You Have Defeated {opponent['name']}*
+
+{stage_text}
 
 *{next_opponent['name']}*
 {next_opponent['hp']} HP | {next_opponent['shield']} Shield | {next_opponent['damage']} Damage | {next_opponent['level'].capitalize()} Tier
                         
-**
-                
+*Use /attack To FIGHT!*
+
 """)
 
             return
     else:
         respond(f"""You Strike With Your *{text}*
+                
 *{opponent['name']}* Now Has:
+
 {opponent['hp']} HP | {opponent['shield']} Shield""")
 
         # Player Being Hit
@@ -434,25 +637,59 @@ You Now have:
 
         if user.health <= 0:
             time.sleep(1.5)
-            del active_siege[slack_user_id]
-            respond(f"""{opponent['name']} has struck you down. Your vision blurs, 
-the battlefield fading into a haze of blood and smoke.
-Just as the darkness closes in, two familiar figures break through the chaos—Heidi and Orpheus.
+            del container[slack_user_id]
+            if user.xp > 5:
+                user.xp -= 5
+            else: 
+                user.xp = 0
+            
+            if user.coffers > 10:
+                user.coffers -= 10
+            else:
+                user.coffers = 0
+            user.inventory = {}
+            session.commit()
+
+            respond(f"""*{opponent['name']} has struck you down. Your vision blurs,*
                     
-With fierce determination, they lift your broken form and rush you to the healers' tents. 
-Their strength saves your life, but not the siege. 
-The fortress falls, your army retreats, You, Heidi and Orpheus all return to the Warlord's camp, burdened by defeat.
+*the battlefield fading into a haze of blood and smoke.*
+*Just as the darkness closes in, two familiar figures break through the chaos—Heidi and Orpheus.*
                     
-The Warlord sneers as he faces you, saying... "Pathetic... perhaps I chose poorly." """)
+*With fierce determination, they lift your broken form and rush you to the healers' tents.*
+*Their strength saves your life, but not the siege.*
+*The fortress falls, your army retreats, You, Heidi and Orpheus all return to the Warlord's camp, burdened by defeat.*
+                    
+*The Warlord sneers as he faces you, saying... "Pathetic... perhaps I chose poorly."* 
+                    
+*You Have Lost 5 XP, 10 Coffers, And Everything You Had In Your Satchel.*""")
         else:
             time.sleep(1.5)
             respond(f"""*{opponent['name']}* Has Attacked You. 
+                    
 You Now Have:
+                    
 {user.health} HP | {user.shield} Shield""")
-            
+
+
+@app.command('/exit')
+def exit(ack, respond, command):
+    ack()
+    global active_siege, active_raid
+
+    slack_user_id = command['user_id']
+
+    if slack_user_id in active_siege:
+        del active_siege[slack_user_id]
+        respond ('*You Have Fled The Siege... Traitor.*')
+    elif slack_user_id in active_raid:
+        del active_raid[slack_user_id]
+        respond ('*You Have Fled The Raid... Traitor.*')
+    else:
+        respond("You're Not In The Middle of Any Battle Right Now.")
+
 
 @app.command('/kill-count')
-def coffers(ack, respond, command):
+def kill_count(ack, respond, command):
     ack()
 
     text = (command.get("text") or "").strip()
@@ -473,11 +710,11 @@ def coffers(ack, respond, command):
     if is_self:
         respond(f"You Have Killed {user.kills} Enemies.")
     else:
-        respond(f"<{slack_user_id}> Has  Killed {user.kills} Enemies")
+        respond(f"<{slack_user_id}> Has Killed {user.kills} Enemies")
 
 
 @app.command('/siege-count')
-def coffers(ack, respond, command):
+def siege_count(ack, respond, command):
     ack()
 
     text = (command.get("text") or "").strip()
@@ -496,11 +733,10 @@ def coffers(ack, respond, command):
         session.commit()
     
     if is_self:
-        respond(f"You Have Done {user.sieges} Sieges.")
+        respond(f"You Have Won {user.sieges} Sieges.")
     else:
-        respond(f"<{slack_user_id}> Has Done {user.sieges} Sieges")
-
-
+        respond(f"<{slack_user_id}> Has Won {user.sieges} Sieges")
+        
 @app.command('/admin')
 def admin(ack, respond, command):
     ack()
@@ -515,6 +751,7 @@ def admin(ack, respond, command):
     user.rank = 'Raider'
 
     if add_item(user, "Sword"):
+        user.shield = 100
         session.commit()
         respond("Added Sword to your inventory!")
     else:
@@ -527,7 +764,3 @@ def admin(ack, respond, command):
 if __name__ == "__main__":
     handler = SocketModeHandler(app, os.environ["APP_TOKEN"])
     handler.start()
-
-
-
-# Problem when i try to kill the opponent.
