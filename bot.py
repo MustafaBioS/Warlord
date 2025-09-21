@@ -30,7 +30,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     slack_id = Column(String, unique=True)
     health = Column(Integer, default=100)
-    armor = Column(Integer, default=0)
+    shield = Column(Integer, default=0)
     coffers = Column(Integer, default=0)
     rank = Column(String,default='Recruit')
     inventory = Column(MutableDict.as_mutable(JSON), default=dict)
@@ -113,6 +113,7 @@ def help(ack, respond, command):
 > */exit-siege* -> Exits From The Current Siege
 > */siege-count* -> Shows How Many Sieges You've Done.
 > */attack* -> Attacks Your Opponent.
+> */admin* -> SALEH USE THIS TO GET A SWORD TO ATTACK WITH.
             """)
 
 @app.command('/satchel')
@@ -188,6 +189,7 @@ def coffers(ack, respond, command):
 active_siege = {}
 cds = {}
 siege_cd_seconds = 12 * 60 * 60
+last_attack = {}
 
 @app.command('/siege')
 def siege(ack, respond, command):
@@ -231,7 +233,9 @@ def siege(ack, respond, command):
         randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
 
         opponent_name = random.choice(randomopp)
+        opponent_name2 = random.choice(randomopp)
         opponent = Opponents[opponent_name]
+        opponent2 = Opponents[opponent_name2]
 
         active_siege[slack_user_id] = {
             "name": opponent_name,
@@ -241,8 +245,12 @@ def siege(ack, respond, command):
             "level": opponent["level"],
         }
 
+        user.health = 100
+        user.shield = 0
+        session.commit()
 
         cds[slack_user_id] = now
+        last_attack.pop(slack_user_id, None)
 
         respond(f"""*You Have Started a Siege...*
 
@@ -280,54 +288,156 @@ def exit(ack, respond, command):
 @app.command('/attack')
 def attack(ack, respond, command):
     ack()
-    global active_siege
+    global active_siege, last_attack
     
+
+    min_time = 3
+    max_time = 8
+
     text = (command.get("text") or "").strip().title()
 
     slack_user_id = command['user_id']
 
     user = session.query(User).filter_by(slack_id=slack_user_id).first()
 
-    weapon = Weapons.get(text)
-    ack()
     if slack_user_id not in active_siege:
         respond("You're Not In a Siege Right Now.")
+        return
 
-    elif not user or not user.inventory:
+    if not user or not user.inventory:
         respond("You Have No Items To Fight With, Use /satchel To Check Your Inventory.")
         return
     
-    elif text == "":
+    if not text:
+        respond("Choose a Weapon To Attack With.")
+        return
+    
+    if text == "":
         return
 
-    elif text not in user.inventory:
-        respond(f"You Don't Have a {text} In Your Satchel, Use /satchel To Check Your Items.")
+    if text not in user.inventory:
+        respond(f"You Don't Have a *{text}* In Your Satchel, Use /satchel To Check Your Items.")
+        return
+    
+    weapon = Weapons.get(text)
+    if not weapon:
+        respond(f'*{text}* Is Not A Valid Weapon')
         return
 
-    elif not weapon:
-        respond(f'{text} Is Not A Valid Weapon')
-        return
-    ack()
-    damage = weapon['damage']
-
+    now = time.time()
+    last_time = last_attack.get(slack_user_id)
     opponent = active_siege[slack_user_id]
 
+    if last_time is not None:
+        atime = now - last_time
+
+        if atime < min_time:
+            dmg = opponent['damage']
+            blocked = min(dmg, user.shield)
+            user.shield -= blocked
+            dmg -= blocked
+            if dmg > 0:
+                user.health -= dmg
+            session.commit()
+            last_attack[slack_user_id] = now
+
+            if user.health <= 0:
+                respond(f"You Attacked Too Fast... *{opponent['name']}* Parried And Killed You!")
+                return
+            else:
+                respond(f"""You Attacked Too Fast... *{opponent['name']}* Parried.
+You Now have:
+{user.health} HP | {user.shield} Shield""")
+                return
+
+        elif atime > max_time:
+            dmg = opponent['damage']
+            blocked = min(dmg, user.shield)
+            user.shield -= blocked
+            dmg -= blocked
+            if dmg > 0:
+                user.health -= dmg
+            session.commit()
+            last_attack[slack_user_id] = now
+
+            if user.health <= 0:
+                respond(f"You Hesitated Too Long... *{opponent['name']}* struck and killed you!")
+                return
+            else:
+                respond(f"""You Hesitated! *{opponent['name']}* Strikes First.
+You Now have: 
+{user.health} HP | {user.shield} Shield""")
+                return
+
+    # Opponent Being Hit
+    ack()
+    dmg = weapon['damage']
+
     if opponent['shield'] > 0:
-        dmgtaken = min(damage, opponent['shield'])
+        dmgtaken = min(dmg, opponent['shield'])
         opponent['shield'] -= dmgtaken
 
-    if damage > 0:
-        opponent['hp'] -= damage
+    if dmg > 0:
+        opponent['hp'] -= dmg
+
+    last_attack[slack_user_id] = now
 
     if opponent['hp'] <= 0:
+        Ranks = {
+            'Recruit': "low",
+            'Raider': 'mid',
+            'Champion': 'high',
+            'Warchief': 'veryhigh',
+        }
+        rank = Ranks.get(user.rank, "low")
+        randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
+        opponent2_name = random.choice(randomopp)
+        opponent2 = Opponents[opponent2_name]
         del active_siege[slack_user_id]
         user.kills += 1
         session.commit()
-        respond(f'You Have Won The Fight.')
+        respond(f"""You Have Defeated *{opponent['name']}*, 
+                            
+*The clash of steel and cries of battle echo around you as your army relentlessly pushes forward. Each step is hard-won,*
+*each swing of the blade a fight for survival.*
+                
+*Heidi moves with unwavering determination, striking with precision,* 
+*while Orpheus wades through the chaos, carving a path through the enemy ranks.*
+                
+*Bodies fall and walls tremble under the weight of war, yet your forces press on, battered but unbroken.*
+*Finally, after a grueling advance, you reach the castle gates, the air thick with smoke and the taste of iron.*
+                
+*And there, as if waiting for this very moment, emerges a new opponent...*
+                
+""")        
+
+        return
     else:
-        respond(f"""You Strike With Your {text}
+        respond(f"""You Strike With Your *{text}*
 *{opponent['name']}* Now Has:
 {opponent['hp']} HP | {opponent['shield']} Shield""")
+
+        # Player Being Hit
+
+        dmg_to_player = opponent['damage']
+        blocked = min(dmg_to_player, user.shield)
+        user.shield -= blocked
+        dmg_to_player -= blocked
+        if dmg_to_player > 0:
+            user.health -= dmg_to_player
+
+        session.commit()
+
+        if user.health <= 0:
+            time.sleep(1.5)
+            respond("You Died.")
+        else:
+            time.sleep(1.5)
+            respond(f"""*{opponent['name']}* Has Attacked You. 
+You Now Have:
+{user.health} HP | {user.shield} Shield""")
+            
+
 
 
 @app.command('/admin')
@@ -356,3 +466,7 @@ def admin(ack, respond, command):
 if __name__ == "__main__":
     handler = SocketModeHandler(app, os.environ["APP_TOKEN"])
     handler.start()
+
+
+
+# Problem when i try to kill the opponent.
