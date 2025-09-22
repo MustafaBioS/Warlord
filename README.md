@@ -28,6 +28,8 @@ If you're a high rank there's a chance to get ambushed after a battle.
 
 ***
 
-Slack Channel Link:
+***Slack Channel Link:***
 
 ```https://hackclub.slack.com/archives/C09H4L83QEL```
+
+***
