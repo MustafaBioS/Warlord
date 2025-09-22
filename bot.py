@@ -1265,7 +1265,7 @@ You Now have:
             return
 
         if battle_type != 'ambush':
-            ambush_chance = 1.0 if rank_level in ('very high', 'high') else 0.001
+            ambush_chance = 0.1 if rank_level in ('very high', 'high') else 0.00001
             if random.random() < ambush_chance:
                 ambushers = [ (n,d) for n,d in Opponents.items() if d["level"] in ("high","very high") ]
                 if not ambushers:
@@ -1618,34 +1618,6 @@ def leaderboard(ack, respond, command):
         leaderboard += f"{i}. <@{user.slack_id}> — {user.rank} ({user.xp} XP)\n"
 
     respond(leaderboard)
-
-@app.command('/admin')
-def admin(ack, respond, command):
-    ack()
-    slack_user_id = command['user_id']
-
-    user = session.query(User).filter_by(slack_id=slack_user_id).first()
-    if not user:
-        user = User(slack_id=slack_user_id) 
-        session.add(user)
-        session.commit()  
-
-    user.rank = 'Conqueror'
-
-    if add_item(user, "Admin Sword"):
-        user.shield = 100
-        session.commit()
-        respond("Added Sword to your inventory!")
-    if add_item(user, "Small Health Potion"):
-        respond('potioned')
-    if add_item(user, "Small Health Potion"):
-        respond('potioned x2')
-    else:
-        respond("You already have a Sword!")
-
-    session.commit()
-
-
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, os.environ["APP_TOKEN"])
