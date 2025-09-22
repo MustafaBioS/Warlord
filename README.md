@@ -27,7 +27,3 @@ If you're a high rank there's a chance to get ambushed after a battle.
 > **/leaderboard** → Shows The Leaderboard.
 
 ***
-
-![Image](<img width="954" height="406" alt="image" src="https://github.com/user-attachments/assets/e6a717a6-307f-424f-bc3d-511b700b8048" />)
-
-***
