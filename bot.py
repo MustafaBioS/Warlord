@@ -34,9 +34,8 @@ class User(Base):
     slack_id = Column(String, unique=True)
     health = Column(Integer, default=100)
     shield = Column(Integer, default=0)
-    coffers = Column(Integer, default=0)
     rank = Column(String,default='Recruit')
-    inventory = Column(MutableDict.as_mutable(JSON),  default=lambda: {"Rusty Sword": 1, "Small Health Potion": 2})
+    inventory = Column(MutableDict.as_mutable(JSON),  default=lambda: {"Rusty Sword": 1, "Small Health Potion": 3, "Rusty Armor": 1, "Family Picture": 1})
     xp = Column(Integer, default=0)
     kills = Column(Integer, default=0)
     sieges = Column(Integer, default=0)
@@ -49,21 +48,45 @@ Base.metadata.create_all(engine)
 Items = {
     "Shield": {"unique": True}, 
     "Small Health Potion": {"unique": False},
+    "Medium Health Potion": {"unique": False},
+    "Big Health Potion": {"unique": False},
     "Rusty Sword": {"unique": True, "damage": 10},
-    "Admin Sword": {"unique": True, "damage": 200},
+    "Steel Blade": {"unique": True, "damage": 20},
+    "Battle Blade": {"unique": True, "damage": 40},
+    "Knight's Sword": {"unique": True, "damage": 50},   
+    "Champion's Sword": {"unique": True, "damage": 75},
+    "Legendary Sword": {"unique": True, "damage": 85},
+    "Needlessly Large Sword": {"unique": True, "damage": 100},
+    "Banana": {"unique": False},
+    "Family Picture": {"unique": True},
+    "Admin Sword": {"unique": True, "damage": 200}
 }
 
 Weapons = {
     "Rusty Sword": {"unique": True, "damage": 10},
-    "Admin Sword": {"unique": True, "damage": 200},
+    "Steel Blade": {"unique": True, "damage": 20},
+    "Battle Blade": {"unique": True, "damage": 40},
+    "Knight's Sword": {"unique": True, "damage": 50},   
+    "Champion's Sword": {"unique": True, "damage": 75},
+    "Legendary Sword": {"unique": True, "damage": 85},
+    "Needlessly Large Sword": {"unique": True, "damage": 100},
+    "Admin Sword": {"unique": True, "damage": 200}
 }
 
 Healable = {
-    "Small Health Potion": {"unique": False, "heal": 20}
+    "Small Health Potion": {"unique": False, "heal": 25},
+    "Medium Health Potion": {"unique": False, "heal": 50},
+    "Big Health Potion": {"unique": False, "heal": 100},
 }
 
 Armor = {
-    "Rusty Armor": {"unique": False, "shield": 20}
+    "Rusty Armor": {"unique": False, "shield": 25},
+    "Chainmail Armor": {"unique": False, "shield": 50},
+    "Legendary Armor": {"unique": False, "shield": 100}
+}
+
+random_items = {
+
 }
 
 Opponents = {
@@ -195,6 +218,54 @@ Assasinations = {
     "Guildmaster Kaivor": {"health": 100, "shield": 100, "level": 'very high', "damage": 105},
 }
 
+def loot_roll(user):
+
+    Ranks = {
+        "Recruit": "very low",
+        "Footman": "very low",
+        "Soldier": "low",
+        "Raider": "low",
+        "Veteran": "mid",
+        "Champion": "mid",
+        "Knight": "high",
+        "Commander": "high",
+        "General": "very high",
+        "Conqueror": "very high",
+        }
+    
+    rank_tier = Ranks.get(user.rank, "very low")
+    loot_pool = []
+
+    if rank_tier in ["very low", "low"]:
+        loot_pool += ["Rusty Sword"] * 5 + ["Steel Blade"] * 2 + ["Banana"]
+    elif rank_tier in ["mid"]:
+        loot_pool += ["Steel Blade"] * 3 + ["Battle Blade"] * 2 + ["Knight's Sword"]
+    elif rank_tier  in ["high"]:
+        loot_pool += ["Battle Blade"] * 2 + ["Knight's Sword"] * 2 + ["Champion's Sword"]
+    elif rank_tier  in ["very high"]:
+        loot_pool += ["Champion's Sword", "Legendary Sword", "Needlessly Large Sword"] * 2
+
+    if rank_tier in ["very low", "low"]:
+        loot_pool += ["Rusty Armor"] * 5
+    elif rank_tier in ["mid"]:
+        loot_pool += ["Chainmail Armor"] * 3
+    elif rank_tier in ["high"]:
+        loot_pool += ["Chainmail Armor"] * 2 + ["Legendary Armor"]
+    elif rank_tier in ["very high"]:
+        loot_pool += ["Legendary Armor"] * 3
+
+
+    if rank_tier in ["very low", "low"]:
+        loot_pool += ["Small Health Potion"] * 5
+    elif rank_tier in ["mid"]:
+        loot_pool += ["Small Health Potion"] * 2 + ["Medium Health Potion"] * 3
+    elif rank_tier in ["high"]:
+        loot_pool += ["Medium Health Potion"] * 3 + ["Big Health Potion"] * 2
+    elif rank_tier in ["very high"]:
+        loot_pool += ["Big Health Potion"] * 4 + ["Medium Health Potion"] * 2
+
+    return random.choice(loot_pool)
+
 def add_item(user, item_name):
     item_def = Items.get(item_name, {"unique": False})
 
@@ -218,8 +289,7 @@ def help(ack, respond, command):
     respond("""> *All Available Commands:*
 >
 > */satchel* → View the items you currently carry.
-> */rank (user)* → Check your rank, or mention a user to see theirs.
-> */coffers (user)* → See how many coffers you hold, or mention a user to see theirs.
+> */rank (user)* → Check your rank and XP, or mention a user to see theirs.
 > */siege* → March with your army into a siege. (Available once every 12 hours, Slight chance to get ambushed if you're a high rank)
 > */exit-siege* → Withdraw from your current siege. (Still triggers the siege cooldown)
 > */siege-count (user)* → Shows how many sieges you've taken part in, or mention a user to see theirs.
@@ -227,7 +297,11 @@ def help(ack, respond, command):
 > */kill-count (user)* → Display your kill count, or mention a user to see theirs.
 > */raid* → Raid a village with your army. (Available once every 3 hours, Slight chance to get ambushed if you're a high rank)
 > */fortify* → Defend the castle with your army. (Available once every 24 hours)
-> */duel* → Duel with your friends for bragging privileges.
+> */assassinate* → Assassinate a target that The Warlord chooses.
+> */raid-count (user)* → Shows how many raids you've taken part in, or mention a user to see theirs.
+> */fortify-count (user)* → Shows how many times you've defended the castle, or mention a user to see theirs.
+> */assassination-count (user)* → Shows how many times you've assassinated a target, or mention a user to see theirs.
+> */leaderboard* → Shows The Leaderboard.
 """)
 
 @app.command('/satchel')
@@ -272,33 +346,9 @@ def rank(ack, respond, command):
         session.commit()
     
     if is_self:
-        respond(f"Your Current Rank Is: {user.rank}")
+        respond(f"Your Current Rank Is: {user.rank} And {user.xp} XP")
     else:
-        respond(f"<{slack_user_id}>'s Current Rank Is: {user.rank}")
-
-@app.command('/coffers')
-def coffers(ack, respond, command):
-    ack()
-
-    text = (command.get("text") or "").strip()
-
-    if text.startswith('@'):
-        slack_user_id = text
-        is_self = slack_user_id == command['user_id']
-    else:
-        slack_user_id = command['user_id']
-        is_self = True
-
-    user = session.query(User).filter_by(slack_id=slack_user_id).first()
-    if not user:
-        user = User(slack_id=slack_user_id)
-        session.add(user)
-        session.commit()
-    
-    if is_self:
-        respond(f"You Have {user.coffers} Coffers.")
-    else:
-        respond(f"<{slack_user_id}> Has {user.coffers} Coffers")
+        respond(f"<{slack_user_id}>'s Current Rank Is: {user.rank} And {user.xp} XP")
 
 
 siege_stages = [
@@ -1139,26 +1189,29 @@ You Now have:
                     container = active_siege
                     stages = siege_stages
                     battle_type = "siege"
+                    xp_count = 20
                 elif orig_battle_type == "raid":
                     active_raid[slack_user_id] = {"opponents": orig_opps, "current": orig_current}
                     container = active_raid
                     stages = raid_stages
                     battle_type = "raid"
+                    xp_count = 10
                 elif orig_battle_type == "fortify":
                     active_fortify[slack_user_id] = {"opponents": orig_opps, "current": orig_current}
                     container = active_fortify
                     stages = fortify_stages
                     battle_type = "fortify"
+                    xp_count = 25
                 elif orig_battle_type == "assassination":
                     active_assassination[slack_user_id] = {"opponents": orig_opps, "current": orig_current}
                     container = active_assassination
                     stages = assassinate_stages
                     battle_type = "assassination"
+                    xp_count = 5
                 else:
-                    user.xp += 10 
-                    user.coffers += 15
+                    user.xp += xp_count 
                     session.commit()
-                    respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{saved_stage_text}\n\n*You Have Gained 10 XP, And 15 Coffers.*")
+                    respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{saved_stage_text}\n\n*You Have Gained {xp_count} XP.*")
                     return
 
                 active = container[slack_user_id]
@@ -1176,14 +1229,25 @@ You Now have:
                     respond(f"*{opponent['name']} Has Been Defeated.*\n\n{stage_text}\n\n*{next_op['name']}*\n{next_op['hp']} HP | {next_op['shield']} Shield | {next_op['damage']} Damage | {next_op['level'].title()} Tier\n\n*Use /attack To FIGHT!*")
                     return
                 else:
-                    user.xp += 10; user.coffers += 15
-                    if battle_type == 'siege': user.sieges += 1
-                    elif battle_type == 'raid': user.raids += 1
-                    elif battle_type == 'fortify': user.fortifications += 1
-                    elif battle_type == 'assassination': user.assassinations += 1
+                    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+                    if battle_type == 'siege':
+                        user.sieges += 1
+                        xp_count = 20
+                    elif battle_type == 'raid': 
+                        user.raids += 1
+                        xp_count = 10
+                    elif battle_type == 'fortify':
+                        user.fortifications += 1
+                        xp_count = 25
+                    elif battle_type == 'assassination': 
+                        user.assassinations += 1
+                        xp_count = 5
+                    user.xp += xp_count
+                    rolled_item = loot_roll(user)
+                    add_item(user, rolled_item)
                     container.pop(slack_user_id, None)
                     session.commit()
-                    respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{stages[-1]}\n\n*You Have Gained 10 XP, And 15 Coffers.*")
+                    respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{stages[-1]}\n\n*You Have Gained {xp_count} XP And a {rolled_item}*")
                     return
 
         if active["current"] < len(active["opponents"]):
@@ -1238,13 +1302,12 @@ You Now have:
 
         container.pop(slack_user_id, None)
         user.xp += 10
-        user.coffers += 15
         if battle_type == 'siege': user.sieges += 1
         elif battle_type == 'raid': user.raids += 1
         elif battle_type == 'fortify': user.fortifications += 1
         elif battle_type == 'assassination': user.assassinations += 1
         session.commit()
-        respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{(stages[-1] if stages else '')}\n*You Have Gained 10 XP, And 15 Coffers.*")
+        respond(f"*{opponent['name']} Falls Before Your Blade.*\n\n{(stages[-1] if stages else '')}\n*You Have Gained {xp_count} XP*")
         return
 
     stage_index = active['current']
@@ -1264,15 +1327,14 @@ You Now have:
     if dmg_to_player > 0:
         user.health -= dmg_to_player
     session.commit()
-    
-    if user.health <= 0:
 
+    if user.health <= 0:
+        time.sleep(1.5)
         container.pop(slack_user_id, None)
-        if user.xp > 5: user.xp -= 5
-        else: user.xp = 0
-        if user.coffers > 10: user.coffers -= 10
-        else: user.coffers = 0
-        session.commit()
+        if user.xp > 20:
+            user.xp -= 5
+        else: 
+            user.xp = 0
 
         if battle_type == "siege":
             lose_text = """*the battlefield fading into a haze of blood and smoke.*
@@ -1311,28 +1373,24 @@ You Now have:
 *"Pathetic... Perhaps i should have chosen better."* """
 
 
-        respond(f"""*{opponent['name']} Has Struck You Down. Your Vision Blurs,*
-                    
-{lose_text}
-
-*You Have Lost 5 XP, And 10 Coffers.*""")
-        
-        return
-
     if user.health <= 0:
         time.sleep(1.5)
         container.pop(slack_user_id, None)
-        if user.xp > 5:
+        if user.xp > 20:
             user.xp -= 5
         else: 
             user.xp = 0
         
-        if user.coffers > 10:
-            user.coffers -= 10
-        else:
-            user.coffers = 0
         session.commit()
-            
+
+
+        respond(f"""*{opponent['name']} Has Struck You Down. Your Vision Blurs,*
+                    
+{lose_text}
+
+*You Have Lost {xp_count} XP*""")
+
+
     else:
         time.sleep(1.5)
         respond(f"""*{opponent['name']}* Has Attacked You. 
@@ -1340,6 +1398,64 @@ You Now have:
 You Now Have:
                     
 {user.health} HP | {user.shield} Shield""")
+        
+
+    if user.xp >= 5000:
+        user.rank = 'Warchief'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles, He called you to talk.
+You go talk to him and to your surprise, He has decided you are now the Warchief, The Warlord's Right Hand Man.""")
+    elif user.xp >= 3000:
+        user.rank = 'Conqueror'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 2000:
+        user.rank = 'Commander'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 1500:
+        user.rank = 'Knight'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 1000:
+        user.rank = 'Champion'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 800:
+        user.rank = 'Veteran'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 600:
+        user.rank = 'Raider'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 400:
+        user.rank = 'Soldier'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    elif user.xp >= 200:
+        user.rank = 'Footman'
+        respond(f""" You Have Ranked Up...
+
+The Warlord has been watching your battles and, impressed by your skills, has decided that you deserve a rank up.
+You Are Now a {user.rank}""")
+    else:
+        user.rank = 'Recruit'
 
 
 @app.command('/exit')
@@ -1487,6 +1603,21 @@ def assassination_count(ack, respond, command):
         respond(f"You Have Done {user.assassinations} Assassinations.")
     else:
         respond(f"<{slack_user_id}> Has Done {user.sieges} Assassinations")
+
+@app.command('/leaderboard')
+def leaderboard(ack, respond, command):
+    ack()
+    top_users = session.query(User).order_by(User.xp.desc()).limit(10).all()
+
+    if not top_users:
+        respond("No warriors have stepped onto the field yet.")
+        return
+    
+    leaderboard = "*Leaderboard*\n"
+    for i, user in enumerate(top_users, start=1):
+        leaderboard += f"{i}. <@{user.slack_id}> — {user.rank} ({user.xp} XP)\n"
+
+    respond(leaderboard)
 
 @app.command('/admin')
 def admin(ack, respond, command):
