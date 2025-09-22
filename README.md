@@ -1,5 +1,6 @@
 <h1 align="center"> The Warlord </h1>
 ***
+
 **About:**
 
 The Warlord is an RPG Slack game bot where you can go on sieges, raids, assassinations, or even defend your castle for XP and to rank up.
