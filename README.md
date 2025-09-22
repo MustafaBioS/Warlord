@@ -27,3 +27,7 @@ If you're a high rank there's a chance to get ambushed after a battle.
 > **/leaderboard** → Shows The Leaderboard.<br>
 
 ***
+
+Slack Channel Link:
+
+```https://hackclub.slack.com/archives/C09H4L83QEL```
