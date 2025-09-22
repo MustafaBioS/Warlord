@@ -50,6 +50,9 @@ class User(Base):
     xp = Column(Integer, default=0)
     kills = Column(Integer, default=0)
     sieges = Column(Integer, default=0)
+    raids = Column(Integer, default=0)
+    fortifications = Column(Integer, default=0)
+    assassinations = Column(Integer, default=0)
 
 Base.metadata.create_all(engine)
 
@@ -57,10 +60,12 @@ Items = {
     "Shield": {"unique": True}, 
     "Small Health Potion": {"unique": False},
     "Rusty Sword": {"unique": True, "damage": 10},
+    "Admin Sword": {"unique": True, "damage": 200},
 }
 
 Weapons = {
     "Rusty Sword": {"unique": True, "damage": 10},
+    "Admin Sword": {"unique": True, "damage": 200},
 }
 
 Healable = {
@@ -75,11 +80,11 @@ Opponents = {
 
     # Very Low Tier
 
-    "Peasant": {"health": 20, "shield": 0, "level": 'verylow', "damage": 10},
-    "Militia": {"health": 15, "shield": 0, "level": 'verylow', "damage": 5},
-    "Bandit": {"health": 15, "shield": 0, "level": 'verylow', "damage": 7},
-    "Thief": {"health": 15, "shield": 2, "level": 'verylow', "damage": 10},
-    "Squire": {"health": 20, "shield": 3, "level": 'verylow', "damage": 12},
+    "Peasant": {"health": 20, "shield": 0, "level": 'very low', "damage": 10},
+    "Militia": {"health": 15, "shield": 0, "level": 'very low', "damage": 5},
+    "Bandit": {"health": 15, "shield": 0, "level": 'very low', "damage": 7},
+    "Thief": {"health": 15, "shield": 2, "level": 'very low', "damage": 10},
+    "Squire": {"health": 20, "shield": 3, "level": 'very low', "damage": 12},
 
     # Low Tier
 
@@ -107,22 +112,22 @@ Opponents = {
 
     # Very High Tier
 
-    "High Marshal": {"health": 100, "shield": 85, "level": 'veryhigh', "damage": 90},
-    "Lord Protector": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 85},
-    "Grandmaster": {"health": 100, "shield": 95, "level": 'veryhigh', "damage": 95},
-    "Conqueror": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
-    "The Harbinger": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
+    "High Marshal": {"health": 100, "shield": 85, "level": 'very high', "damage": 90},
+    "Lord Protector": {"health": 100, "shield": 100, "level": 'very high', "damage": 85},
+    "Grandmaster": {"health": 100, "shield": 95, "level": 'very high', "damage": 95},
+    "Conqueror": {"health": 100, "shield": 100, "level": 'very high', "damage": 100},
+    "The Harbinger": {"health": 100, "shield": 100, "level": 'very high', "damage": 100},
 }
 
 raid_Opponents = {
 
     # Very Low Tier
 
-    "Timid Villager": {"health": 20, "shield": 0, "level": 'verylow', "damage": 10},
-    "Scared Farmhand": {"health": 15, "shield": 0, "level": 'verylow', "damage": 7},
-    "Scrawny Herdsman": {"health": 15, "shield": 0, "level": 'verylow', "damage": 5},
-    "Knife-Wielding Peasant": {"health": 20, "shield": 2, "level": 'verylow', "damage": 10},
-    "Village Scavenger": {"health": 15, "shield": 1, "level": 'verylow', "damage": 8},
+    "Timid Villager": {"health": 20, "shield": 0, "level": 'very low', "damage": 10},
+    "Scared Farmhand": {"health": 15, "shield": 0, "level": 'very low', "damage": 7},
+    "Scrawny Herdsman": {"health": 15, "shield": 0, "level": 'very low', "damage": 5},
+    "Knife-Wielding Peasant": {"health": 20, "shield": 2, "level": 'very low', "damage": 10},
+    "Village Scavenger": {"health": 15, "shield": 1, "level": 'very low', "damage": 8},
 
     # Low Tier
 
@@ -150,54 +155,54 @@ raid_Opponents = {
 
     # Very High Tier
 
-    "Shadow Marshal Guard": {"health": 100, "shield": 85, "level": 'veryhigh', "damage": 90},
-    "Protector of the Hall Villager": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 85},
-    "Master Duelist Guard": {"health": 100, "shield": 95, "level": 'veryhigh', "damage": 95},
-    "Silent Conqueror Villager": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
-    "Blood Harbinger Guard": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
+    "Shadow Marshal Guard": {"health": 100, "shield": 85, "level": 'very high', "damage": 90},
+    "Protector of the Hall Villager": {"health": 100, "shield": 100, "level": 'very high', "damage": 85},
+    "Master Duelist Guard": {"health": 100, "shield": 95, "level": 'very high', "damage": 95},
+    "Silent Conqueror Villager": {"health": 100, "shield": 100, "level": 'very high', "damage": 100},
+    "Blood Harbinger Guard": {"health": 100, "shield": 100, "level": 'very high', "damage": 100},
 }
 
 Assasinations = {
 
     # Very Low Tier
 
-    "Gorrik the Rusted": {"health": 20, "shield": 0, "level": 'verylow', "damage": 10},
-    "Fenric Drunkenhand": {"health": 15, "shield": 0, "level": 'verylow', "damage": 5},
-    "Syla the Fallen": {"health": 15, "shield": 0, "level": 'verylow', "damage": 7},
-    "Tharn Crackedshield": {"health": 15, "shield": 2, "level": 'verylow', "damage": 10},
-    "Dreg Campbane": {"health": 20, "shield": 3, "level": 'verylow', "damage": 12},
+    "Gorrik the Rusted": {"health": 50, "shield": 0, "level": 'very low', "damage": 25},
+    "Fenric Drunkenhand": {"health": 55, "shield": 0, "level": 'very low', "damage": 30},
+    "Syla the Fallen": {"health": 65, "shield": 0, "level": 'very low', "damage": 27},
+    "Tharn Crackedshield": {"health": 60, "shield": 2, "level": 'very low', "damage": 28},
+    "Dreg Campbane": {"health": 57, "shield": 3, "level": 'very low', "damage": 29},
 
     # Low Tier
 
-    "Rowan Ironhelm": {"health": 30, "shield": 0, "level": 'low', "damage": 20},
-    "Varek of the Blades": {"health": 35,"shield": 5, "level": 'low', "damage": 16},
-    "Tilda of Ashridge": {"health": 25, "shield": 5, "level": 'low', "damage": 17},
-    "Garric Stormsword": {"health": 30, "shield": 0, "level": 'low', "damage": 22},
-    "Bailiff Korran": {"health": 25, "shield": 5, "level": 'low', "damage": 25},
+    "Rowan Ironhelm": {"health": 70, "shield": 0, "level": 'low', "damage": 35},
+    "Varek of the Blades": {"health": 75,"shield": 5, "level": 'low', "damage": 40},
+    "Tilda of Ashridge": {"health": 80, "shield": 5, "level": 'low', "damage": 36},
+    "Garric Stormsword": {"health": 76, "shield": 0, "level": 'low', "damage": 39},
+    "Bailiff Korran": {"health": 78, "shield": 5, "level": 'low', "damage": 37},
 
     # Middle Tier
 
-    "Drax Ironmantle": {"health": 40, "shield": 10, "level": 'mid', "damage": 30},
-    "Kael Freeblade": {"health": 50, "shield": 5, "level": 'mid', "damage": 25},
-    "Sergeant Veyric": {"health": 45, "shield": 10, "level": 'mid', "damage": 35},
-    "Captain Malor": {"health": 55, "shield": 15, "level": 'mid', "damage": 35},
-    "Thorne Borderwarden": {"health": 50, "shield": 10, "level": 'mid', "damage": 40},
+    "Drax Ironmantle": {"health": 100, "shield": 15, "level": 'mid', "damage": 45},
+    "Kael Freeblade": {"health": 100, "shield": 10, "level": 'mid', "damage": 50},
+    "Sergeant Veyric": {"health": 100, "shield": 12, "level": 'mid', "damage": 55},
+    "Captain Malor": {"health": 100, "shield": 13, "level": 'mid', "damage": 54},
+    "Thorne Borderwarden": {"health": 100, "shield": 14, "level": 'mid', "damage": 49},
 
     # High Tier
 
-    "Draven Bloodhelm": {"health": 75, "shield": 70, "level": 'high', "damage": 75},
-    "Serik Bannerbane": {"health": 80, "shield": 50, "level": 'high', "damage": 70},
-    "Malakar the Prelate": {"health": 90, "shield": 75, "level": 'high', "damage": 70},
-    "Kaelen Crimsonheir": {"health": 100, "shield": 20, "level": 'high', "damage": 80},
-    "Vaylen Keepwarden": {"health": 85, "shield": 40, "level": 'high', "damage": 70},
+    "Draven Bloodhelm": {"health": 100, "shield": 70, "level": 'high', "damage": 75},
+    "Serik Bannerbane": {"health": 100, "shield": 65, "level": 'high', "damage": 70},
+    "Malakar the Prelate": {"health": 100, "shield": 75, "level": 'high', "damage": 70},
+    "Kaelen Crimsonheir": {"health": 100, "shield": 60, "level": 'high', "damage": 80},
+    "Vaylen Keepwarden": {"health": 100, "shield":  70, "level": 'high', "damage": 70},
 
     # Very High Tier
 
-    "Kaerok the Warlord": {"health": 100, "shield": 85, "level": 'veryhigh', "damage": 90},
-    "Sorrin Mercurial": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 85},
-    "Eldrith Spellbinder": {"health": 100, "shield": 95, "level": 'veryhigh', "damage": 95},
-    "Councilor Varath": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
-    "Guildmaster Kaivor": {"health": 100, "shield": 100, "level": 'veryhigh', "damage": 100},
+    "Kaerok the Warlord": {"health": 100, "shield": 100, "level": 'very high', "damage": 120},
+    "Sorrin Mercurial": {"health": 100, "shield": 100, "level": 'very high', "damage": 115},
+    "Eldrith Spellbinder": {"health": 100, "shield": 100, "level": 'very high', "damage": 125},
+    "Councilor Varath": {"health": 100, "shield": 100, "level": 'very high', "damage": 110},
+    "Guildmaster Kaivor": {"health": 100, "shield": 100, "level": 'very high', "damage": 105},
 }
 
 def add_item(user, item_name):
@@ -475,6 +480,19 @@ fortify_stages = [
 *The Warlord has seen you fighting and is proud of you and rewards you for your troubles*"""
 ]
 
+assassinate_stages = [
+
+    # WIN
+
+"""*The final swing of your blade finds its mark. The target lies still, and the chill of victory fills the air.*  
+*You wipe your blade clean and make your way back through the shadowed streets, every step carrying the weight of your deadly success.*
+
+*Upon entering the castle, The Warlord awaits. His eyes meet yours, a rare glint of approval shining through his stern gaze.*
+*"'Perhaps I truly have chosen the right person for this task,'" he says, voice rich with satisfaction.*  
+
+*The Warlord Rewards You For Your Troubles...*"""
+]
+
 @app.command('/use')
 def use(ack, respond, command):
     ack()
@@ -595,19 +613,19 @@ def siege(ack, respond, command):
     else:
 
         Ranks = {
-        "Recruit": "verylow",
-        "Footman": "verylow",
+        "Recruit": "very low",
+        "Footman": "very low",
         "Soldier": "low",
         "Raider": "low",
         "Veteran": "mid",
         "Champion": "mid",
         "Knight": "high",
         "Commander": "high",
-        "General": "veryhigh",
-        "Conqueror": "veryhigh",
+        "General": "very high",
+        "Conqueror": "very high",
         }
 
-        rank = Ranks.get(user.rank, "verylow")
+        rank = Ranks.get(user.rank, "very low")
 
         randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
 
@@ -655,7 +673,7 @@ def siege(ack, respond, command):
            
 *{first_opponent['name']}*
 
-{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].capitalize()} Tier
+{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].title()} Tier
 
 *Use /attack To FIGHT!*
 """)
@@ -701,19 +719,19 @@ def raid(ack, respond, command):
     else:
 
         Ranks = {
-        "Recruit": "verylow",
-        "Footman": "verylow",
+        "Recruit": "very low",
+        "Footman": "very low",
         "Soldier": "low",
         "Raider": "low",
         "Veteran": "mid",
         "Champion": "mid",
         "Knight": "high",
         "Commander": "high",
-        "General": "veryhigh",
-        "Conqueror": "veryhigh",
+        "General": "very high",
+        "Conqueror": "very high",
         }
 
-        rank = Ranks.get(user.rank, "verylow")
+        rank = Ranks.get(user.rank, "very low")
 
         randomopp = [name for name, data in raid_Opponents.items() if data["level"] == rank]
 
@@ -758,7 +776,7 @@ def raid(ack, respond, command):
 
 *{first_opponent['name']}*
 
-{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].capitalize()} Tier""")
+{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].title()} Tier""")
 
 
 
@@ -789,7 +807,7 @@ def fortify(ack, respond, command):
 
     elif slack_user_id in fortify_cds:
         elapsed = now - fortify_cds[slack_user_id]
-        if elapsed < fortify_cds:
+        if elapsed < fortify_cd_seconds:
             remaining_seconds = int(fortify_cd_seconds - elapsed)
             remaininghrs = remaining_seconds // 3600
             remainingmins = (remaining_seconds % 3600) // 60
@@ -801,19 +819,19 @@ def fortify(ack, respond, command):
     else:
 
         Ranks = {
-        "Recruit": "verylow",
-        "Footman": "verylow",
+        "Recruit": "very low",
+        "Footman": "very low",
         "Soldier": "low",
         "Raider": "low",
         "Veteran": "mid",
         "Champion": "mid",
         "Knight": "high",
         "Commander": "high",
-        "General": "veryhigh",
-        "Conqueror": "veryhigh",
+        "General": "very high",
+        "Conqueror": "very high",
         }
 
-        rank = Ranks.get(user.rank, "verylow")
+        rank = Ranks.get(user.rank, "very low")
 
         randomopp = [name for name, data in Opponents.items() if data["level"] == rank]
 
@@ -857,7 +875,7 @@ def fortify(ack, respond, command):
 
 *{first_opponent['name']}*
 
-{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].capitalize()} Tier""")
+{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].title()} Tier""")
 
 @app.command('/assassinate')
 def assassinate(ack, respond, command):
@@ -885,9 +903,9 @@ def assassinate(ack, respond, command):
         respond("You're Already In An Assassination.")
 
     elif slack_user_id in assassinate_cds:
-        elapsed = now - fortify_cds[slack_user_id]
-        if elapsed < fortify_cds:
-            remaining_seconds = int(fortify_cd_seconds - elapsed)
+        elapsed = now - assassinate_cds[slack_user_id]
+        if elapsed < assassinate_cd_seconds:
+            remaining_seconds = int(assassinate_cd_seconds - elapsed)
             remaininghrs = remaining_seconds // 3600
             remainingmins = (remaining_seconds % 3600) // 60
             if remaininghrs > 0:
@@ -898,24 +916,23 @@ def assassinate(ack, respond, command):
     else:
 
         Ranks = {
-        "Recruit": "verylow",
-        "Footman": "verylow",
+        "Recruit": "very low",
+        "Footman": "very low",
         "Soldier": "low",
         "Raider": "low",
         "Veteran": "mid",
         "Champion": "mid",
         "Knight": "high",
         "Commander": "high",
-        "General": "veryhigh",
-        "Conqueror": "veryhigh",
+        "General": "very high",
+        "Conqueror": "very high",
         }
 
-        rank = Ranks.get(user.rank, "verylow")
+        rank = Ranks.get(user.rank, "very low")
 
         randomopp = [name for name, data in Assasinations.items() if data["level"] == rank]
 
-        num_opponents = random.randint(5, 7)
-        num_opponents = min(num_opponents, max(1, len(randomopp)))
+        num_opponents = 1
 
         sampled_names = random.sample(randomopp, num_opponents)
 
@@ -928,7 +945,7 @@ def assassinate(ack, respond, command):
         for name in sampled_names
         ]
 
-        active_fortify[slack_user_id] = {
+        active_assassination[slack_user_id] = {
         "opponents": opponents_list,
         "current": 0
         }
@@ -944,15 +961,15 @@ def assassinate(ack, respond, command):
 
         respond(f"""*The Warlord Has Ordered You To Assasinate Someone...*
 
-*You hear The Warlord calling your name, You go to answer him, He orders you to go to assassinate someone, Their name is... *{first_opponent['name']}*.  
+*You hear The Warlord calling your name, You go to answer him, He orders you to go to assassinate someone, Their name is... {first_opponent['name']}*.  
 
-*You leave the castle to go to assassinate them, The air hangs heavy as you slip through alleys and torchlit halls. 
-Your mark is near, The sound of steel on stone, The faint mutter of guards, The weight of coin that bought their loyalty. 
-You tighten your grip as you spot the target. Tonight, Blood will be spilled.
+*You leave the castle to go to assassinate them, The air hangs heavy as you slip through alleys and torchlit halls.*
+*Your mark is near, The sound of steel on stone, The faint mutter of guards, The weight of coin that bought their loyalty.*
+*You tighten your grip as you spot the target. Tonight, Blood will be spilled.*
 
 *{first_opponent['name']}*
 
-{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].capitalize()} Tier""")
+{first_opponent['hp']} HP | {first_opponent['shield']} Shield | {first_opponent['damage']} Damage | {first_opponent['level'].title()} Tier""")
 
 
 
@@ -1009,20 +1026,37 @@ You tighten your grip as you spot the target. Tonight, Blood will be spilled.
 #     client.chat_postMessage(channel=command['channel_id'], text=f'Duel Started Between <@{challenger_id}> And <@{opponent_id}>!')
 #     respond(text=f"@{opponent_id} has accepted your duel! It's your turn to attack. Use `/duel-attack <weapon>`")
 
+active_ambush = {}
+
+
 @app.command('/attack')
 def attack(ack, respond, command):
     ack()
     global active_siege, last_attack, siege_stages, active_raid, raid_stages
-    
 
     min_time = 3
-    max_time = 8
+    max_time = 15
 
     text = (command.get("text") or "").strip().title()
 
     slack_user_id = command['user_id']
 
     user = session.query(User).filter_by(slack_id=slack_user_id).first()
+
+    Ranks = {
+    "Recruit": "very low",
+    "Footman": "very low",
+    "Soldier": "low",
+    "Raider": "low",
+    "Veteran": "mid",
+    "Champion": "mid",
+    "Knight": "high",
+    "Commander": "high",
+    "General": "very high",
+    "Conqueror": "very high",
+    }
+
+    rank_level = Ranks.get(user.rank, "very low")
 
     if slack_user_id in active_siege:
         container = active_siege
@@ -1041,7 +1075,12 @@ def attack(ack, respond, command):
 
     elif slack_user_id in active_assassination:
         container = active_assassination
+        stages = assassinate_stages
         battle_type = 'assassination'
+
+    elif slack_user_id in active_ambush:
+        container = active_ambush
+        battle_type = 'ambush'
 
     # elif slack_user_id in active_duels:
     #     container = active_duels
@@ -1115,8 +1154,6 @@ def attack(ack, respond, command):
 # {opponent_id} Now Has:
 # {duel['hp'][opponent_id]} HP | {duel['shield'][opponent_id]} Shield""")
 
-
-
     now = time.time()
     last_time = last_attack.get(slack_user_id)
     opponent = active['opponents'][active['current']]
@@ -1187,14 +1224,53 @@ You Now have:
 
         active["current"] += 1
         if active["current"] >= len(active["opponents"]):
-            del container[slack_user_id]
-            user.xp += 10
-            user.coffers += 15
-            if battle_type == 'siege':
-                user.sieges += 1
-            session.commit()
             stage_text = stages[-1] if stages else ""
-            respond(f"""*{opponent['name']} falls before your blade.*         
+
+            if rank_level == 'high' or rank_level == 'very high':
+                if random.random() < 1.0:
+                    ambushers = [ (n,d) for n,d in Opponents.items() if d["level"] in ("high","very high") ]
+                    if not ambushers:
+                        ambushers = list(Opponents.items())
+
+            if battle_type == 'ambush':
+
+                return_info = active.get('return', {})
+                
+                if slack_user_id in container:
+                    del container[slack_user_id]
+
+                    name, d = random.choice(ambushers)
+                    next_opponent = {
+                        "name": name,
+                        "hp": d["health"],
+                        "shield": d["shield"],
+                        "damage": d["damage"],
+                        "level": d["level"]
+                    }
+                    respond(f"""*You Have Been Ambushed...*
+*As You Go Back To The Castle, You Notice People Following You...*
+*They start getting closer and closer until you suddenly find someone attacking you, it's...*
+    
+*{next_opponent['name']}*
+{next_opponent['hp']} HP | {next_opponent['shield']} Shield | {next_opponent['damage']} Damage | {next_opponent['level'].title()} Tier                          
+
+*Use /attack To FIGHT!*
+
+""")
+            else:
+                user.xp += 10
+                user.coffers += 15
+                if battle_type == 'siege':
+                    user.sieges += 1
+                elif battle_type == 'raid':
+                    user.raids += 1
+                elif battle_type == 'fortify':
+                    user.fortifications += 1
+                elif battle_type == 'assassination':
+                    user.assassinations += 1
+                del container[slack_user_id]
+                session.commit()
+                respond(f"""*{opponent['name']} Falls Before Your Blade.*         
 {stage_text}
 
 *You Have Gained 10 XP, And 15 Coffers.*""")
@@ -1209,12 +1285,12 @@ You Now have:
                 
             next_opponent = active["opponents"][active["current"]] 
             stage_text = stages[stage_index] if stages else ""
-            respond(f"""*You Have Defeated {opponent['name']}*
+            respond(f"""*{opponent['name']} Falls Before Your Blade.*
 
 {stage_text}
 
 *{next_opponent['name']}*
-{next_opponent['hp']} HP | {next_opponent['shield']} Shield | {next_opponent['damage']} Damage | {next_opponent['level'].capitalize()} Tier
+{next_opponent['hp']} HP | {next_opponent['shield']} Shield | {next_opponent['damage']} Damage | {next_opponent['level'].title()} Tier
                         
 *Use /attack To FIGHT!*
 
@@ -1251,7 +1327,6 @@ You Now have:
                 user.coffers -= 10
             else:
                 user.coffers = 0
-            user.inventory = {}
             session.commit()
 
             if battle_type == "siege":
@@ -1283,12 +1358,19 @@ You Now have:
 *Your defenders retreat in disarray, smoke and ruin marking the night.*  
 *The Warlord regards you with a hard glare, his voice dripping with disdain: "Your castle falls… and so does your honor."*"""
 
+            elif battle_type == "assassination":
+                lose_text = """ *As you lie there, helpless, Heidi and Orpheus spot you as they were on there way to go somewhere.* 
+*They fight off your opponent and then they carry you back to the castle, Where the medical team helps you then you go meet The Warlord.*
 
-            respond(f"""*{opponent['name']} has struck you down. Your vision blurs,*
+*As The Warlord hears that you failed the assassination, He looks at you with anger and disappointment as he says...*
+*"Pathetic... Perhaps i should have chosen better."* """
+
+
+            respond(f"""*{opponent['name']} Has Struck You Down. Your Vision Blurs,*
                     
 {lose_text}
 
-*You Have Lost 5 XP, 10 Coffers, And Everything You Had In Your Satchel.*""")
+*You Have Lost 5 XP, And 10 Coffers.*""")
             
         else:
             time.sleep(1.5)
@@ -1314,7 +1396,10 @@ def exit(ack, respond, command):
         respond ('*You Have Fled The Raid... Traitor.*')
     elif slack_user_id in active_fortify:
         del active_fortify[slack_user_id]
-        respond("You Have Ran Away From Defending The Castle... Traitor.")
+        respond("*You Have Ran Away From Defending The Castle... Traitor.*")
+    elif slack_user_id in active_assassination:
+        del active_assassination[slack_user_id]
+        respond("*You Have Fled The Assassination... Traitor.*")
     else:
         respond("You're Not In The Middle of Any Battle Right Now.")
 
@@ -1367,7 +1452,81 @@ def siege_count(ack, respond, command):
         respond(f"You Have Won {user.sieges} Sieges.")
     else:
         respond(f"<{slack_user_id}> Has Won {user.sieges} Sieges")
+
+
+@app.command('/raid-count')
+def raid_count(ack, respond, command):
+    ack()
+
+    text = (command.get("text") or "").strip()
+
+    if text.startswith('@'):
+        slack_user_id = text
+        is_self = slack_user_id == command['user_id']
+    else:
+        slack_user_id = command['user_id']
+        is_self = True
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id)
+        session.add(user)
+        session.commit()
+    
+    if is_self:
+        respond(f"You Have Won {user.raids} Raids.")
+    else:
+        respond(f"<{slack_user_id}> Has Won {user.raids} Raids")
+
         
+@app.command('/fortify-count')
+def fortify_count(ack, respond, command):
+    ack()
+
+    text = (command.get("text") or "").strip()
+
+    if text.startswith('@'):
+        slack_user_id = text
+        is_self = slack_user_id == command['user_id']
+    else:
+        slack_user_id = command['user_id']
+        is_self = True
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id)
+        session.add(user)
+        session.commit()
+    
+    if is_self:
+        respond(f"You Have Defended The Castle {user.fortifications} Times.")
+    else:
+        respond(f"<{slack_user_id}> Has Defended The Castle {user.fortifications} Times")
+
+@app.command('/assassination-count')
+def assassination_count(ack, respond, command):
+    ack()
+
+    text = (command.get("text") or "").strip()
+
+    if text.startswith('@'):
+        slack_user_id = text
+        is_self = slack_user_id == command['user_id']
+    else:
+        slack_user_id = command['user_id']
+        is_self = True
+
+    user = session.query(User).filter_by(slack_id=slack_user_id).first()
+    if not user:
+        user = User(slack_id=slack_user_id)
+        session.add(user)
+        session.commit()
+    
+    if is_self:
+        respond(f"You Have Done {user.assassinations} Assassinations.")
+    else:
+        respond(f"<{slack_user_id}> Has Done {user.sieges} Assassinations")
+
 @app.command('/admin')
 def admin(ack, respond, command):
     ack()
@@ -1379,12 +1538,16 @@ def admin(ack, respond, command):
         session.add(user)
         session.commit()  
 
-    user.rank = 'Raider'
+    user.rank = 'Conqueror'
 
-    if add_item(user, "Sword"):
+    if add_item(user, "Admin Sword"):
         user.shield = 100
         session.commit()
         respond("Added Sword to your inventory!")
+    if add_item(user, "Small Health Potion"):
+        respond('potioned')
+    if add_item(user, "Small Health Potion"):
+        respond('potioned x2')
     else:
         respond("You already have a Sword!")
 
