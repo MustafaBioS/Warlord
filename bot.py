@@ -14,17 +14,11 @@ import copy
 
 # Initialization
 
-
 env_path = Path('.') / '.env'
-if not env_path.exists():
-    raise FileNotFoundError(".env file not found! Make sure you created it in the project root.")
-
 load_dotenv(dotenv_path=env_path)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN not found in .env! Add your Slack bot token as BOT_TOKEN=...")
-
+app = App(token=os.environ["BOT_TOKEN"],)
+client = WebClient(token=os.environ["BOT_TOKEN"])
 
 engine = create_engine("sqlite:///warlord.db", echo=True)
 Session = sessionmaker(bind=engine)
@@ -1626,9 +1620,5 @@ def leaderboard(ack, respond, command):
     respond(leaderboard)
 
 if __name__ == "__main__":
-    APP_TOKEN = os.getenv("APP_TOKEN")
-    if not APP_TOKEN:
-        raise ValueError("APP_TOKEN not found in .env")
-    
     handler = SocketModeHandler(app, os.environ["APP_TOKEN"])
     handler.start()
