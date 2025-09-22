@@ -1,2 +1,2 @@
-<h1 style="text-align: center; color: green"># The Warlord </h1>
+<h1 align="center"> The Warlord </h1>
 slack bot
