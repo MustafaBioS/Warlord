@@ -1,2 +1,2 @@
-<h1 align="center" style="font-size: 50px"> The Warlord </h1>
+<h1 align="center" style="font-size: 70px"> The Warlord </h1>
 slack bot
